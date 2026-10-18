@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นักสืบอัลกอริทึม (Algorithm Detective) - วิทยาการคำนวณ ป.5</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Prompt & Kanit for Thai Visual Appeal -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        * {
+            font-family: 'Prompt', 'Kanit', sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%);
+            min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .title-font {
+            font-family: 'Kanit', sans-serif;
+        }
+
+        /* Detective Card Styles */
+        .step-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: grab;
+        }
+
+        .step-card:active {
+            cursor: grabbing;
+        }
+
+        .step-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+
+        .detective-badge {
+            animation: floatBadge 3s ease-in-out infinite;
+        }
+
+        @keyframes floatBadge {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+
+        /* Pulsing Glow */
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6366f1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100 antialiased selection:bg-amber-400 selection:text-slate-900">
+
+    <header class="w-full bg-slate-900/90 backdrop-blur-md border-b-4 border-amber-400 sticky top-0 z-30 shadow-2xl">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3 cursor-pointer" id="logoBtn">
+                <div class="bg-amber-400 text-slate-900 p-2 rounded-2xl shadow-lg border-2 border-amber-300 detective-badge">
+                    <i class="fa-solid fa-magnifying-glass text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-amber-300 title-font tracking-wide flex items-center gap-2">
+                        นักสืบอัลกอริทึม <span class="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full font-sans">วิทยาการคำนวณ ป.5</span>
+                    </h1>
+                    <p class="text-xs text-slate-300">คลี่คลายปริศนา เรียงลำดับขั้นตอนการแก้ปัญหา</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar (Score, Coins, Stars, Level) -->
+            <div class="flex items-center space-x-2 sm:space-x-4 bg-slate-800/90 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl border-2 border-indigo-500 shadow-inner">
+                <!-- Level Indicator -->
+                <div class="flex items-center space-x-1.5 border-r border-slate-700 pr-2 sm:pr-3">
+                    <i class="fa-solid fa-flag text-indigo-400 text-sm"></i>
+                    <span id="levelDisplay" class="text-xs sm:text-sm font-bold text-indigo-200">ด่าน 1/10</span>
+                </div>
+
+                <!-- Score -->
+                <div class="flex items-center space-x-1.5 border-r border-slate-700 pr-2 sm:pr-3">
+                    <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+                    <span id="scoreDisplay" class="text-xs sm:text-sm font-black text-amber-300">0</span>
+                    <span class="text-[10px] text-slate-400 hidden sm:inline">คะแนน</span>
+                </div>
+
+                <!-- Coins -->
+                <div class="flex items-center space-x-1.5">
+                    <i class="fa-solid fa-coins text-yellow-400 text-sm"></i>
+                    <span id="coinsDisplay" class="text-xs sm:text-sm font-black text-yellow-300">0</span>
+                </div>
+
+                <!-- Mute Toggle -->
+                <button id="soundToggleBtn" class="ml-1 p-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-500 transition">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col justify-center items-center relative">
+
+        <!-- 1. START SCREEN -->
+        <section id="startScreen" class="w-full flex flex-col items-center text-center space-y-6 py-6">
+            <div class="relative detective-badge my-2">
+                <div class="w-36 h-36 sm:w-44 sm:h-44 bg-gradient-to-tr from-amber-400 via-indigo-600 to-purple-600 rounded-3xl p-1 shadow-2xl flex items-center justify-center border-4 border-amber-300">
+                    <div class="w-full h-full bg-slate-900 rounded-2xl flex flex-col items-center justify-center p-4">
+                        <span class="text-6xl sm:text-7xl">🕵️‍♂️</span>
+                        <span class="text-xs text-amber-400 font-bold tracking-widest mt-2 uppercase">Algorithm Detective</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 max-w-lg">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-amber-300 title-font">
+                    ภารกิจไขคดี <span class="text-emerald-400">นักสืบอัลกอริทึม</span>
+                </h2>
+                <p class="text-slate-200 text-sm sm:text-base leading-relaxed bg-slate-900/80 p-4 rounded-2xl border border-indigo-500/50 shadow-lg">
+                    สวัสดีเหล่านักสืบตัวจิ๋ว! ยินดีต้อนรับสู่สำนักงานนักสืบอัลกอริทึม คุณต้องช่วยตัวละครไขภารกิจทั้ง <strong class="text-amber-300">10 คดี</strong> โดยการเรียงลำดับขั้นตอนการทำงานให้ถูกต้อง!
+                </p>
+            </div>
+
+            <!-- Learning Objective Info Card -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl text-left">
+                <div class="p-3 bg-slate-900/90 rounded-2xl border border-indigo-500/40 flex items-center space-x-3">
+                    <div class="p-2.5 bg-indigo-500/20 text-indigo-400 rounded-xl text-xl">
+                        <i class="fa-solid fa-list-ol"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-300">อัลกอริทึม</div>
+                        <div class="text-[11px] text-slate-300">ลำดับขั้นตอนการทำงาน</div>
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-900/90 rounded-2xl border border-indigo-500/40 flex items-center space-x-3">
+                    <div class="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl text-xl">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-300">การคิดเป็นระบบ</div>
+                        <div class="text-[11px] text-slate-300">แก้ปัญหาอย่างถูกวิธี</div>
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-900/90 rounded-2xl border border-indigo-500/40 flex items-center space-x-3">
+                    <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl text-xl">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-300">สะสมเหรียญ/ดาว</div>
+                        <div class="text-[11px] text-slate-300">คว้าถ้วยรางวัลนักสืบ</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startPlayBtn" class="px-8 py-4 bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 font-black rounded-2xl text-xl shadow-xl transform active:scale-95 transition flex items-center gap-3 border-2 border-amber-200 cursor-pointer">
+                <i class="fa-solid fa-play text-2xl"></i>
+                <span>เริ่มไขคดีด่านแรก!</span>
+            </button>
+        </section>
+
+        <!-- 2. GAMEPLAY SCREEN -->
+        <section id="gameScreen" class="w-full hidden space-y-4">
+            <!-- Level Header Banner -->
+            <div class="bg-slate-900/90 rounded-2xl p-4 border-2 border-indigo-500 flex flex-wrap justify-between items-center gap-3 shadow-xl">
+                <div class="flex items-center space-x-3">
+                    <span id="caseEmoji" class="text-4xl bg-slate-800 p-2 rounded-2xl border border-slate-700">🪥</span>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span id="caseNumberTag" class="bg-amber-400 text-slate-950 text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase">คดีที่ 1</span>
+                            <span id="difficultyTag" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-xs px-2 py-0.5 rounded-md">ง่าย</span>
+                        </div>
+                        <h3 id="caseTitle" class="font-bold text-white text-lg sm:text-xl mt-0.5">ภารกิจ: การแปรงฟันอย่างถูกวิธี</h3>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button id="hintBtn" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/50 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                        <span>คำใบ้</span>
+                    </button>
+                    <button id="resetLevelBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="hidden sm:inline">เริ่มใหม่</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Problem Scenario & Instruction Box -->
+            <div class="bg-indigo-950/60 p-4 rounded-2xl border border-indigo-500/40 text-sm text-indigo-100 flex items-start space-x-3">
+                <i class="fa-solid fa-circle-info text-indigo-400 text-lg mt-0.5"></i>
+                <div class="space-y-1">
+                    <p id="caseDescription" class="font-medium">
+                        น้องต้อมกำลังจะแปรงฟันก่อนนอน แต่ขั้นตอนเกิดสลับกันไปหมด! ช่วยนักสืบลากหรือกดลูกศรเปลี่ยนตำแหน่ง เพื่อเรียงลำดับจาก **แรกสุดไปหลังสุด**
+                    </p>
+                    <p class="text-xs text-amber-300/90 font-light">💡 คำแนะนำ: สามารถลากการ์ดสลับตำแหน่ง หรือใช้ปุ่มลูกศรขึ้น-ลงข้างการ์ดได้เลย</p>
+                </div>
+            </div>
+
+            <!-- Draggable Steps Container -->
+            <div id="stepsList" class="space-y-2.5 min-h-[220px]">
+                <!-- Step Cards Rendered Dynamically via JS -->
+            </div>
+
+            <!-- Feedback / Hint Alert Box -->
+            <div id="feedbackBox" class="hidden p-4 rounded-2xl text-sm font-medium border flex items-center gap-3 animate-fade-in">
+                <!-- Feedback Content -->
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex justify-between items-center pt-2">
+                <div class="text-xs text-slate-400">
+                    พยายามครั้งที่: <span id="attemptCount" class="font-bold text-amber-400">1</span>
+                </div>
+                <button id="submitAnswerBtn" class="px-8 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-base shadow-lg flex items-center gap-2 transform active:scale-95 transition cursor-pointer">
+                    <i class="fa-solid fa-check-double text-lg"></i>
+                    <span>ตรวจสอบขั้นตอนอัลกอริทึม</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. LEVEL SUCCESS MODAL -->
+        <div id="successModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center transform transition-all scale-100">
+                <div class="w-20 h-20 bg-amber-400/20 border-2 border-amber-400 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner text-amber-400 animate-bounce">
+                    🕵️‍♂️
+                </div>
+
+                <div class="space-y-1">
+                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                        คลี่คลายคดีสำเร็จ!
+                    </span>
+                    <h3 class="text-2xl font-black text-amber-300 title-font pt-2">
+                        ถูกต้องแม่นยำ!
+                    </h3>
+                    <p id="modalCaseTitle" class="text-xs text-slate-300 font-medium">คดีที่ 1: การแปรงฟันอย่างถูกวิธี</p>
+                </div>
+
+                <!-- Stars Awarded -->
+                <div class="flex justify-center space-x-2 text-3xl py-1" id="starsContainer">
+                    <i class="fa-solid fa-star text-amber-400 filter drop-shadow"></i>
+                    <i class="fa-solid fa-star text-amber-400 filter drop-shadow"></i>
+                    <i class="fa-solid fa-star text-amber-400 filter drop-shadow"></i>
+                </div>
+
+                <!-- Rewards Earned -->
+                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex justify-around items-center text-xs">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-trophy text-amber-400 text-base"></i>
+                        <span>คะแนน: <strong id="modalScoreEarned" class="text-amber-400 font-bold">+10</strong></span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-coins text-yellow-400 text-base"></i>
+                        <span>เหรียญ: <strong id="modalCoinsEarned" class="text-yellow-300 font-bold">+50</strong></span>
+                    </div>
+                </div>
+
+                <!-- Algorithm Explanation Box -->
+                <div class="bg-indigo-950/80 p-3.5 rounded-2xl border border-indigo-500/40 text-left space-y-1">
+                    <div class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i> สรุปขั้นตอนอัลกอริทึมคดีนี้:
+                    </div>
+                    <p id="algorithmExplanation" class="text-xs text-slate-200 leading-relaxed">
+                        การเรียงลำดับขั้นตอนเริ่มจากเตรียมอุปกรณ์ -> แปรงฟัน -> บ้วนปาก ทำให้งานสำเร็จเรียบร้อยโดยไม่สับสน!
+                    </p>
+                </div>
+
+                <button id="nextLevelBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black rounded-2xl text-base shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
+                    <span>ลุยคดีถัดไป!</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. FINAL VICTORY & SUMMARY SCREEN -->
+        <section id="victoryScreen" class="w-full hidden text-center space-y-6 py-6 max-w-xl">
+            <div class="relative detective-badge">
+                <div class="w-28 h-28 bg-amber-400/20 border-4 border-amber-400 rounded-full flex items-center justify-center text-6xl mx-auto shadow-2xl text-amber-400 glow-effect">
+                    🏆
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <span class="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    ภารกิจเสร็จสิ้นสมบูรณ์
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-black text-amber-300 title-font">
+                    สุดยอดนักสืบอัลกอริทึม!
+                </h2>
+                <p class="text-slate-200 text-sm sm:text-base max-w-md mx-auto">
+                    ยินดีด้วย! คุณสามารถไขคดีและแก้ปัญหาครบทั้ง 10 ด่านได้อย่างยอดเยี่ยม
+                </p>
+            </div>
+
+            <!-- Score Breakdown Card -->
+            <div class="bg-slate-900/90 p-6 rounded-3xl border-2 border-indigo-500 shadow-2xl space-y-5">
+                <div class="grid grid-cols-3 gap-3 text-center border-b border-slate-800 pb-4">
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">คะแนนรวม</div>
+                        <div id="finalScore" class="text-2xl sm:text-3xl font-black text-amber-400 title-font">100</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">เหรียญสะสม</div>
+                        <div id="finalCoins" class="text-2xl sm:text-3xl font-black text-yellow-300 title-font">500</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">ดาวทั้งหมด</div>
+                        <div id="finalStars" class="text-2xl sm:text-3xl font-black text-amber-300 title-font">30/30</div>
+                    </div>
+                </div>
+
+                <!-- Key Takeaway Banner (Requirement Checklist) -->
+                <div class="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 p-4 rounded-2xl border border-indigo-400/50 text-left space-y-2">
+                    <div class="flex items-center space-x-2 text-amber-300 font-bold text-sm">
+                        <i class="fa-solid fa-key text-base"></i>
+                        <span>บทเรียนสำคัญสำหรับนักสืบ:</span>
+                    </div>
+                    <p class="text-sm text-amber-200 font-semibold leading-relaxed text-center sm:text-left bg-slate-950/60 p-3 rounded-xl border border-amber-400/30">
+                        “การเรียงลำดับขั้นตอนที่ถูกต้อง คือหัวใจสำคัญของอัลกอริทึม”
+                    </p>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        เมื่อเราวางแผนและปฏิบัติตามลำดับขั้นตอนที่ชัดเจน ปัญหาต่างๆ ในชีวิตประจำวันก็จะถูกแก้ไขได้อย่างถูกต้องและมีประสิทธิภาพ!
+                    </p>
+                </div>
+            </div>
+
+            <button id="restartGameBtn" class="w-full py-4 bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 font-black rounded-2xl text-lg shadow-xl flex items-center justify-center gap-2 border-2 border-amber-200 cursor-pointer">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>เล่นใหม่อีกครั้งเพื่อทบทวนทักษะ</span>
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        /* ==========================================================================
+           1. NATIVE WEB AUDIO SYNTHESIZER (NO EXTERNAL AUDIO FILES DEPENDENCY)
+           ========================================================================== */
+        class SoundSynth {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playClick() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.03);
+
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.03);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.03);
+            }
+
+            playMove() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(500, this.ctx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playCorrect() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+
+                    gain.gain.setValueAtTime(0.15, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.2);
+                });
+            }
+
+            playWrong() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(140, now + 0.25);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playVictory() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [440, 554.37, 659.25, 880, 1108.73, 1318.51];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.1);
+
+                    gain.gain.setValueAtTime(0.2, now + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.1);
+                    osc.stop(now + i * 0.1 + 0.35);
+                });
+            }
+        }
+
+        const sound = new SoundSynth();
+
+        /* ==========================================================================
+           2. GAME DATA (10 PROGRESSIVE ALGORITHM CASES FOR GRADE 5)
+           ========================================================================== */
+        const casesData = [
+            {
+                id: 1,
+                emoji: "🪥",
+                title: "ภารกิจ: การแปรงฟันอย่างถูกวิธี",
+                difficulty: "ง่าย",
+                diffColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
+                description: "น้องต้อมกำลังจะแปรงฟันก่อนนอน ช่วยเรียงลำดับขั้นตอนการแปรงฟันให้ถูกต้อง",
+                hint: "ต้องใส่ยาสีฟันบนแปรงก่อนที่จะเริ่มแปรงฟันนะ!",
+                explanation: "เริ่มจากบีบยาสีฟัน -> แปรงฟันให้ทั่วทุกซี่ -> บ้วนปากด้วยน้ำสะอาด เป็นขั้นตอนอัลกอริทึมการแปรงฟันที่สมบูรณ์",
+                correctOrder: [
+                    { id: "1-1", text: "บีบยาสีฟันลงบนแปรงฟัน", icon: "🪥" },
+                    { id: "1-2", text: "แปรงฟันให้ทั่วทุกซี่อย่างเบามือ", icon: "🦷" },
+                    { id: "1-3", text: "บ้วนปากด้วยน้ำสะอาดให้สะอาด", icon: "💧" }
+                ]
+            },
+            {
+                id: 2,
+                emoji: "🥪",
+                title: "ภารกิจ: การทำแซนด์วิชแฮมชีส",
+                difficulty: "ง่าย",
+                diffColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
+                description: "คุณแม่ขอให้นักสืบช่วยเรียงขั้นตอนการทำแซนด์วิชเป็นอาหารเช้า",
+                hint: "ไส้แฮมชีสต้องวางอยู่ระหว่างขนมปังสองแผ่นนะ!",
+                explanation: "วางขนมปังแผ่นแรก -> วางแฮมและชีส -> ปิดด้วยขนมปังอีกแผ่น -> หั่นครึ่งพร้อมรับประทาน",
+                correctOrder: [
+                    { id: "2-1", text: "วางขนมปังแผ่นที่ 1 บนจาน", icon: "🍞" },
+                    { id: "2-2", text: "วางแฮมและชีสลงบนขนมปัง", icon: "🧀" },
+                    { id: "2-3", text: "วางขนมปังแผ่นที่ 2 ประกบทับด้านบน", icon: "🍞" },
+                    { id: "2-4", text: "ใช้มีดหั่นครึ่งแซนด์วิชพร้อมเสิร์ฟ", icon: "🔪" }
+                ]
+            },
+            {
+                id: 3,
+                emoji: "🌱",
+                title: "ภารกิจ: การปลูกต้นไม้ในกระถาง",
+                difficulty: "ปานกลาง",
+                diffColor: "bg-amber-500/20 text-amber-300 border-amber-500/50",
+                description: "ชมรมเกษตรต้องการเรียงลำดับขั้นตอนการปลูกต้นไม้ในกระถางให้ถูกต้อง",
+                hint: "ต้องใส่ดินในกระถางก่อนหยอดเมล็ดพืชลงไปนะ!",
+                explanation: "ใส่ดิน -> หยอดเมล็ด -> กลบดิน -> รดน้ำ เป็นลำดับการเจริญเติบโตของพืชอย่างเป็นขั้นตอน",
+                correctOrder: [
+                    { id: "3-1", text: "ใส่ดินลงในกระถางประมาณ 3 ใน 4 ของกระถาง", icon: "🪴" },
+                    { id: "3-2", text: "หยอดเมล็ดพืชลงไปในดิน", icon: "🌱" },
+                    { id: "3-3", text: "ใส่ดินกลบทับเมล็ดพืชบางๆ", icon: "🤎" },
+                    { id: "3-4", text: "รดน้ำพอชุ่มชื้นและนำไปวางไว้ในที่มีแสงแดด", icon: "🚿" }
+                ]
+            },
+            {
+                id: 4,
+                emoji: "💻",
+                title: "ภารกิจ: การเปิดคอมพิวเตอร์เรียนออนไลน์",
+                difficulty: "ปานกลาง",
+                diffColor: "bg-amber-500/20 text-amber-300 border-amber-500/50",
+                description: "ช่วยเรียงลำดับการเปิดใช้งานคอมพิวเตอร์และเข้าโปรแกรมเรียนให้ปลอดภัย",
+                hint: "ต้องเสียบปลั๊กและเปิดสวิตช์ไฟก่อนกดปุ่ม Power ของคอมพิวเตอร์!",
+                explanation: "เสียบปลั๊ก -> กดปุ่ม Power -> ใส่รหัสผ่าน -> เปิดโปรแกรมเรียน เป็นการเริ่มต้นใช้งานระบบคอมพิวเตอร์ที่ถูกต้อง",
+                correctOrder: [
+                    { id: "4-1", text: "เสียบปลั๊กไฟและเปิดสวิตช์เต้ารับ", icon: "🔌" },
+                    { id: "4-2", text: "กดปุ่ม Power ที่เครื่องคอมพิวเตอร์", icon: "🖥️" },
+                    { id: "4-3", text: "ใส่รหัสผ่านเพื่อเข้าสู่ระบบ (Log in)", icon: "🔑" },
+                    { id: "4-4", text: "คลิกเปิดโปรแกรมเรียนออนไลน์", icon: "🌐" }
+                ]
+            },
+            {
+                id: 5,
+                emoji: "🧼",
+                title: "ภารกิจ: การล้างมือ 7 ขั้นตอนแบบรวดเร็ว",
+                difficulty: "ปานกลาง",
+                diffColor: "bg-amber-500/20 text-amber-300 border-amber-500/50",
+                description: "ช่วยล้างมือป้องกันเชื้อโรคตามขั้นตอนมาตรฐานอนามัย",
+                hint: "ต้องรากน้ำให้มือเปียกและถูสบู่ให้เกิดฟองก่อนจะล้างออกนะ!",
+                explanation: "เปิดน้ำล้างมือ -> ถูสบู่ให้เกิดฟอง -> ถูฝ่ามือ หลังมือ และซอกนิ้ว -> ล้างน้ำเปล่า -> เช็ดมือให้แห้ง",
+                correctOrder: [
+                    { id: "5-1", text: "เปิดก๊อกน้ำให้มือเปียกทั่วกัน", icon: "💧" },
+                    { id: "5-2", text: "กดสบู่เหลวลงบนฝ่ามือแล้วถูให้เกิดฟอง", icon: "🧼" },
+                    { id: "5-3", text: "ถูฝ่ามือ หลังมือ และซอกนิ้วนาน 20 วินาที", icon: "🖐️" },
+                    { id: "5-4", text: "ล้างฟองสบู่ออกด้วยน้ำสะอาด", icon: "🚰" },
+                    { id: "5-5", text: "ใช้ผ้าสะอาดหรือกระดาษเช็ดมือให้แห้งสนิท", icon: "🧻" }
+                ]
+            },
+            {
+                id: 6,
+                emoji: "🥛",
+                title: "ภารกิจ: การชงนมอุ่นๆ ให้คุณยาย",
+                difficulty: "ท้าทาย",
+                diffColor: "bg-purple-500/20 text-purple-300 border-purple-500/50",
+                description: "หลานสาวต้องการชงนมผงอุ่นๆ ให้คุณยายดื่มก่อนนอน",
+                hint: "ตักนมผงใส่แก้ว เติมน้ำอุ่น แล้วคนให้ละลายก่อนจะทดสอบความอุ่นนะ!",
+                explanation: "ตักนมผง -> เติมน้ำอุ่น -> คนให้ละลาย -> ชิมทดสอบอุณหภูมิ -> ยื่นให้คุณยาย",
+                correctOrder: [
+                    { id: "6-1", text: "ตักนมผงใส่แก้วน้ำตามปริมาณที่กำหนด", icon: "🥄" },
+                    { id: "6-2", text: "รินน้ำอุ่นลงในแก้วนม", icon: "☕" },
+                    { id: "6-3", text: "ใช้ช้อนคนนมผงกับน้ำอุ่นให้ละลายเข้ากัน", icon: "🔄" },
+                    { id: "6-4", text: "ทดสอบอุณหภูมิว่าไม่อยู่ในระดับที่ร้อนเกินไป", icon: "🌡️" },
+                    { id: "6-5", text: "นำนมอุ่นๆ ไปมอบให้คุณยาย", icon: "👵" }
+                ]
+            },
+            {
+                id: 7,
+                emoji: "🚸",
+                title: "ภารกิจ: การข้ามถนนตรงทางข้ามอย่างปลอดภัย",
+                difficulty: "ท้าทาย",
+                diffColor: "bg-purple-500/20 text-purple-300 border-purple-500/50",
+                description: "นักสืบต้องสอนน้องๆ ข้ามถนนตรงทางลายข้ามได้อย่างถูกต้องและปลอดภัย",
+                hint: "ต้องมองขวา-มองซ้ายให้รถจอดนิ่งสนิทก่อนจะก้าวเดินข้ามถนน!",
+                explanation: "ยืนบนทางเท้า -> มองขวาซ้ายดูรถ -> สัญญาณไฟเขียวคนข้าม -> เดินข้ามอย่างระมัดระวัง -> ถึงฝั่งปลอดภัย",
+                correctOrder: [
+                    { id: "7-1", text: "ยืนรอสายนอกขอบถนนตรงทางลายข้าม", icon: "🛑" },
+                    { id: "7-2", text: "มองขวา มองซ้าย และมองขวาอีกครั้งเพื่อเช็กจราจร", icon: "👀" },
+                    { id: "7-3", text: "รอให้สัญญาณไฟจราจรคนข้ามเปลี่ยนเป็นสีเขียว", icon: "🟢" },
+                    { id: "7-4", text: "ยกมือขึ้นสูงแล้วเดินข้ามถนนอย่างรวดเร็วและระวัง", icon: "🚶" },
+                    { id: "7-5", text: "ก้าวขึ้นบนทางเท้าฝั่งตรงข้ามอย่างปลอดภัย", icon: "🏁" }
+                ]
+            },
+            {
+                id: 8,
+                emoji: "♻️",
+                title: "ภารกิจ: การคัดแยกขยะเพื่อรีไซเคิล",
+                difficulty: "ท้าทาย",
+                diffColor: "bg-purple-500/20 text-purple-300 border-purple-500/50",
+                description: "ช่วยโรงเรียนจัดการขยะรีไซเคิลอย่างถูกวิธีตามหลักอัลกอริทึม",
+                hint: "ขวดพลาสติกต้องล้างคราบน้ำและบีบให้แบนก่อนทิ้งลงถังสีเหลืองนะ!",
+                explanation: "รวบรวมขวด -> เทน้ำทิ้ง -> ล้างขวด -> บีบขวดให้แบน -> ปิดฝา -> ทิ้งลงถังรีไซเคิลสีเหลือง",
+                correctOrder: [
+                    { id: "8-1", text: "รวบรวมขวดพลาสติกที่ใช้แล้วทั้งหมด", icon: "🍾" },
+                    { id: "8-2", text: "เทน้ำหรือเครื่องดื่มที่เหลือค้างออกให้หมด", icon: "🚰" },
+                    { id: "8-3", text: "ล้างทำความสะอาดภายในขวดด้วยน้ำเปล่า", icon: "💦" },
+                    { id: "8-4", text: "บีบขวดพลาสติกให้แบนเพื่อประหยัดพื้นที่", icon: "✊" },
+                    { id: "8-5", text: "หมุนปิดฝาขวดกลับเข้าที่เดิม", icon: "🔘" },
+                    { id: "8-6", text: "นำไปทิ้งลงในถังขยะรีไซเคิล (ถังสีเหลือง)", icon: "🟡" }
+                ]
+            },
+            {
+                id: 9,
+                emoji: "✖️",
+                title: "ภารกิจ: การแก้โจทย์การคูณคณิตศาสตร์",
+                difficulty: "ยากมาก",
+                diffColor: "bg-rose-500/20 text-rose-300 border-rose-500/50",
+                description: "ช่วยแสดงขั้นตอนการตั้งคูณเลขสองหลัก (25 x 12) ตามลำดับอัลกอริทึม",
+                hint: "คูณหลักหน่วยก่อน แล้วค่อยคูณหลักสิบ จากนั้นนำผลคูณทั้งสองมาบวกกัน!",
+                explanation: "ตั้งตัวเลข -> เอาหลักหน่วยคูณ -> เอาหลักสิบคูณ -> นำผลคูณมารวมกัน -> ได้คำตอบที่ถูกต้อง",
+                correctOrder: [
+                    { id: "9-1", text: "เขียนตั้งตัวเลข 25 เป็นตัวตั้ง และ 12 เป็นตัวคูณ", icon: "📝" },
+                    { id: "9-2", text: "นำเลข 2 (หลักหน่วย) ไปคูณกับ 25 ได้ผลลัพธ์ = 50", icon: "1️⃣" },
+                    { id: "9-3", text: "นำเลข 1 (หลักสิบ) ไปคูณกับ 25 ได้ผลลัพธ์ = 250", icon: "2️⃣" },
+                    { id: "9-4", text: "นำผลลัพธ์ทั้งสองบรรทัดมารวมกัน (50 + 250)", icon: "➕" },
+                    { id: "9-5", text: "สรุปคำตอบสุดท้ายเท่ากับ 300", icon: "🎯" },
+                    { id: "9-6", text: "ตรวจทานคำตอบด้วยการหารย้อนกลับ", icon: "🔍" }
+                ]
+            },
+            {
+                id: 10,
+                emoji: "🔐",
+                title: "ภารกิจ: ไขรหัสผ่านตู้เซฟของสำนักงานนักสืบ",
+                difficulty: "ระดับเซียน",
+                diffColor: "bg-amber-400 text-slate-950 font-black",
+                description: "คดีสุดท้าย! เรียงลำดับอัลกอริทึมแก้รหัสเซฟโบราณเพื่อรับถ้วยรางวัลสุดยอดนักสืบ",
+                hint: "หมุนรหัสตามเข็ม -> ทวนเข็ม -> ใส่กุญแจ -> ดึงคันสลัก -> ตรวจสอบไฟสีเขียว!",
+                explanation: "หมุนรหัสขวา -> หมุนรหัสซ้าย -> เสียบกุญแจหลัก -> กดปุ่ม Confirm -> ดึงคันสลักเปิดเซฟ -> ไฟเขียวสว่าง -> รับถ้วยรางวัล!",
+                correctOrder: [
+                    { id: "10-1", text: "หมุนหน้าปัดรหัสไปทางขวาตามเข็มนาฬิกาไปที่เลข 4", icon: "🔄" },
+                    { id: "10-2", text: "หมุนหน้าปัดรหัสไปทางซ้ายทวนเข็มนาฬิกาไปที่เลข 8", icon: "🔁" },
+                    { id: "10-3", text: "เสียบดอกกุญแจสำรองเข้าช่องไขกุญแจด้านล่าง", icon: "🔑" },
+                    { id: "10-4", text: "กดปุ่มยืนยันรหัสผ่าน (Confirm Button)", icon: "🔘" },
+                    { id: "10-5", text: "ดึงคันสลักตู้เซฟลงด้านล่างเพื่อปลดล็อก", icon: "🔓" },
+                    { id: "10-6", text: "ตรวจสอบสัญญาณไฟสีเขียวแสดงสถานะเปิดสำเร็จ", icon: "🟢" },
+                    { id: "10-7", text: "เปิดประตูตู้เซฟออกเพื่อหยิบถ้วยรางวัลสุดยอดนักสืบ", icon: "🏆" }
+                ]
+            }
+        ];
+
+        /* ==========================================================================
+           3. GAME STATE MANAGEMENT
+           ========================================================================== */
+        let currentLevelIndex = 0;
+        let score = 0;
+        let coins = 0;
+        let totalStars = 0;
+        let currentAttempts = 1;
+        let currentStepOrder = [];
+        let draggedIndex = null;
+
+        /* DOM Elements */
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const victoryScreen = document.getElementById('victoryScreen');
+        const successModal = document.getElementById('successModal');
+
+        const levelDisplay = document.getElementById('levelDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const coinsDisplay = document.getElementById('coinsDisplay');
+
+        const caseEmoji = document.getElementById('caseEmoji');
+        const caseNumberTag = document.getElementById('caseNumberTag');
+        const difficultyTag = document.getElementById('difficultyTag');
+        const caseTitle = document.getElementById('caseTitle');
+        const caseDescription = document.getElementById('caseDescription');
+        const stepsList = document.getElementById('stepsList');
+        const feedbackBox = document.getElementById('feedbackBox');
+        const attemptCount = document.getElementById('attemptCount');
+
+        /* ==========================================================================
+           4. GAME LOGIC & NAVIGATION
+           ========================================================================== */
+        function updateStatsUI() {
+            levelDisplay.textContent = `ด่าน ${currentLevelIndex + 1}/${casesData.length}`;
+            scoreDisplay.textContent = score;
+            coinsDisplay.textContent = coins;
+        }
+
+        function showScreen(screen) {
+            [startScreen, gameScreen, victoryScreen].forEach(s => s.classList.add('hidden'));
+            screen.classList.remove('hidden');
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            // Ensure shuffle isn't accidentally already correctly ordered
+            if (JSON.stringify(arr.map(a => a.id)) === JSON.stringify(array.map(a => a.id))) {
+                arr.reverse();
+            }
+            return arr;
+        }
+
+        function loadLevel(index) {
+            if (index >= casesData.length) {
+                showFinalVictory();
+                return;
+            }
+
+            currentLevelIndex = index;
+            currentAttempts = 1;
+            attemptCount.textContent = currentAttempts;
+            feedbackBox.classList.add('hidden');
+
+            const caseInfo = casesData[index];
+            caseEmoji.textContent = caseInfo.emoji;
+            caseNumberTag.textContent = `คดีที่ ${caseInfo.id}`;
+            difficultyTag.textContent = caseInfo.difficulty;
+            difficultyTag.className = `text-xs px-2.5 py-0.5 rounded-md border ${caseInfo.diffColor}`;
+            caseTitle.textContent = caseInfo.title;
+            caseDescription.innerHTML = caseInfo.description;
+
+            // Shuffle initial step cards
+            currentStepOrder = shuffleArray(caseInfo.correctOrder);
+            renderSteps();
+            updateStatsUI();
+        }
+
+        function renderSteps() {
+            stepsList.innerHTML = '';
+
+            currentStepOrder.forEach((step, idx) => {
+                const card = document.createElement('div');
+                card.className = `step-card bg-slate-800/90 hover:bg-slate-800 border-2 border-slate-700 hover:border-indigo-400 p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-3 shadow-md transition transform active:scale-[0.99]`;
+                card.draggable = true;
+                card.dataset.index = idx;
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3 flex-1">
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-indigo-600/40 text-indigo-300 border border-indigo-500/50 rounded-xl flex items-center justify-center font-black text-sm title-font flex-shrink-0">
+                            ${idx + 1}
+                        </div>
+                        <div class="text-2xl sm:text-3xl flex-shrink-0">${step.icon}</div>
+                        <p class="text-xs sm:text-sm font-semibold text-slate-100">${step.text}</p>
+                    </div>
+
+                    <div class="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                        <button onclick="moveStep(${idx}, -1)" class="p-2 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl transition text-xs sm:text-sm ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}" ${idx === 0 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                        <button onclick="moveStep(${idx}, 1)" class="p-2 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl transition text-xs sm:text-sm ${idx === currentStepOrder.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" ${idx === currentStepOrder.length - 1 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </button>
+                        <div class="cursor-grab text-slate-500 hover:text-indigo-400 p-2 text-base">
+                            <i class="fa-solid fa-grip-vertical"></i>
+                        </div>
+                    </div>
+                `;
+
+                // Drag and Drop Events
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragend', handleDragEnd);
+
+                stepsList.appendChild(card);
+            });
+        }
+
+        /* Drag & Drop Handlers */
+        function handleDragStart(e) {
+            draggedIndex = parseInt(this.dataset.index);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const targetIndex = parseInt(this.dataset.index);
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                const movedItem = currentStepOrder.splice(draggedIndex, 1)[0];
+                currentStepOrder.splice(targetIndex, 0, movedItem);
+                sound.playMove();
+                renderSteps();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedIndex = null;
+        }
+
+        function moveStep(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= currentStepOrder.length) return;
+
+            sound.playMove();
+            const temp = currentStepOrder[index];
+            currentStepOrder[index] = currentStepOrder[newIndex];
+            currentStepOrder[newIndex] = temp;
+            renderSteps();
+        }
+
+        /* Verify Answer Logic */
+        function checkAnswer() {
+            sound.playClick();
+            const caseInfo = casesData[currentLevelIndex];
+            const isCorrect = currentStepOrder.every((item, idx) => item.id === caseInfo.correctOrder[idx].id);
+
+            if (isCorrect) {
+                sound.playCorrect();
+                // Score Calculation
+                score += 10;
+                coins += 50;
+                
+                // Stars calculation based on attempts
+                let levelStars = 3;
+                if (currentAttempts === 2) levelStars = 2;
+                else if (currentAttempts >= 3) levelStars = 1;
+                totalStars += levelStars;
+
+                updateStatsUI();
+                showSuccessModal(caseInfo, levelStars);
+            } else {
+                sound.playWrong();
+                currentAttempts++;
+                attemptCount.textContent = currentAttempts;
+
+                feedbackBox.classList.remove('hidden', 'bg-emerald-500/20', 'border-emerald-500', 'text-emerald-300');
+                feedbackBox.className = 'p-4 rounded-2xl text-xs sm:text-sm font-medium border bg-rose-500/20 border-rose-500 text-rose-300 flex items-start gap-3 animate-bounce';
+                feedbackBox.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-xl mt-0.5 text-rose-400"></i>
+                    <div>
+                        <div class="font-bold">ยังไม่ถูกต้องนะเหล่านักสืบ! (ลองใหม่อีกครั้ง)</div>
+                        <div class="mt-1 text-slate-200">💡 <strong>คำใบ้:</strong> ${caseInfo.hint}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function showSuccessModal(caseInfo, stars) {
+            document.getElementById('modalCaseTitle').textContent = `${caseInfo.title}`;
+            document.getElementById('algorithmExplanation').textContent = caseInfo.explanation;
+
+            // Render Stars
+            const starsContainer = document.getElementById('starsContainer');
+            starsContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < stars) {
+                    starsContainer.innerHTML += `<i class="fa-solid fa-star text-amber-400 filter drop-shadow"></i>`;
+                } else {
+                    starsContainer.innerHTML += `<i class="fa-solid fa-star text-slate-700"></i>`;
+                }
+            }
+
+            // Confetti
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+            }
+
+            successModal.classList.remove('hidden');
+        }
+
+        function showFinalVictory() {
+            sound.playVictory();
+            showScreen(victoryScreen);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalCoins').textContent = coins;
+            document.getElementById('finalStars').textContent = `${totalStars}/${casesData.length * 3}`;
+
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+            }
+        }
+
+        /* ==========================================================================
+           5. EVENT LISTENERS
+           ========================================================================== */
+        document.getElementById('startPlayBtn').onclick = () => {
+            sound.playClick();
+            showScreen(gameScreen);
+            loadLevel(0);
+        };
+
+        document.getElementById('submitAnswerBtn').onclick = checkAnswer;
+
+        document.getElementById('nextLevelBtn').onclick = () => {
+            sound.playClick();
+            successModal.classList.add('hidden');
+            loadLevel(currentLevelIndex + 1);
+        };
+
+        document.getElementById('hintBtn').onclick = () => {
+            sound.playClick();
+            const caseInfo = casesData[currentLevelIndex];
+            feedbackBox.classList.remove('hidden', 'bg-rose-500/20', 'border-rose-500', 'text-rose-300');
+            feedbackBox.className = 'p-4 rounded-2xl text-xs sm:text-sm font-medium border bg-amber-500/20 border-amber-500 text-amber-300 flex items-start gap-3';
+            feedbackBox.innerHTML = `
+                <i class="fa-solid fa-lightbulb text-xl mt-0.5 text-amber-400"></i>
+                <div>
+                    <div class="font-bold">คำใบ้พิเศษจากคำสั่งนักสืบ:</div>
+                    <div class="mt-0.5 text-slate-200">${caseInfo.hint}</div>
+                </div>
+            `;
+        };
+
+        document.getElementById('resetLevelBtn').onclick = () => {
+            sound.playClick();
+            loadLevel(currentLevelIndex);
+        };
+
+        document.getElementById('logoBtn').onclick = () => {
+            sound.playClick();
+            showScreen(startScreen);
+        };
+
+        document.getElementById('restartGameBtn').onclick = () => {
+            sound.playClick();
+            score = 0;
+            coins = 0;
+            totalStars = 0;
+            currentLevelIndex = 0;
+            showScreen(startScreen);
+        };
+
+        // Sound Mute Toggle
+        document.getElementById('soundToggleBtn').onclick = () => {
+            sound.muted = !sound.muted;
+            const icon = document.getElementById('soundIcon');
+            if (sound.muted) {
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+            } else {
+                icon.className = "fa-solid fa-volume-high text-amber-300";
+                sound.playClick();
+            }
+        };
+
+        // Init Game App
+        showScreen(startScreen);
+    </script>
+</body>
+</html>
